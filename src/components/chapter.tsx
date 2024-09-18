@@ -1,139 +1,107 @@
-// src/components/Chapter.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  TextField,
+  Box,
   Button,
+  Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
-  Pagination,
-  Card,
-  CardContent,
-  Typography,
-  Box,
+  TablePagination,
+  IconButton,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
+  TextField,
 } from '@mui/material';
-import { getAllChapters, createChapter, updateChapter, deleteChapter, deleteAllChapters } from '../services/chapterServices';
+import { getChapters, createChapter, updateChapter, deleteChapter } from '../services/chapterServices';
+import { Chapter, MeetingDay } from '../types/types';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
 
-interface Chapter {
-  id: string;
-  chapter: string;
-  meetingDay: string;
-}
-
-const ChapterPage: React.FC = () => {
+function ChapterPage() {
   const [chapters, setChapters] = useState<Chapter[]>([]);
-  const [newChapter, setNewChapter] = useState({ chapter: '', meetingDay: '' });
-  const [editingChapter, setEditingChapter] = useState<Chapter | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const itemsPerPage = 3; // Display 3 chapters per page
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [selectedChapter, setSelectedChapter] = useState<Chapter | null>(null);
+  const [chapterData, setChapterData] = useState({ chapter: '', meetingDay: '' as MeetingDay });
 
-  // Fetch chapters from API
   useEffect(() => {
-    const fetchChapters = async () => {
-      setLoading(true);
-      try {
-        const data = await getAllChapters();
-        setChapters(data);
-      } catch (err) {
-        setError('Failed to fetch chapters');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchChapters();
-  }, []);
+  }, [page, rowsPerPage]);
 
-  // Pagination logic
-  const pageCount = Math.ceil(chapters.length / itemsPerPage);
-  const paginatedChapters = chapters.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-
-  const handleCreateChapter = async () => {
+  const fetchChapters = async () => {
     try {
-      const createdChapter = await createChapter(newChapter);
-      setChapters([...chapters, createdChapter]);
-      setNewChapter({ chapter: '', meetingDay: '' });
-    } catch (err) {
-      setError('Failed to create chapter');
+      const response = await getChapters(page, rowsPerPage);
+      setChapters(response.data);
+    } catch (error) {
+      console.error('Error fetching chapters:', error);
     }
   };
 
-  const handleDeleteChapter = async (id: string) => {
+  const handleCreateOrUpdateChapter = async () => {
     try {
-      await deleteChapter(id);
-      setChapters(chapters.filter((chapter) => chapter.id !== id));
-    } catch (err) {
-      setError('Failed to delete chapter');
-    }
-  };
-
-  const handleEditChapter = async (id: string) => {
-    if (editingChapter) {
-      try {
-        const updated = await updateChapter(id, editingChapter);
-        setChapters(chapters.map((ch) => (ch.id === id ? updated : ch)));
-        setEditingChapter(null);
-      } catch (err) {
-        setError('Failed to edit chapter');
+      if (selectedChapter) {
+        await updateChapter(selectedChapter._id, chapterData);
+      } else {
+        await createChapter(chapterData);
       }
+      fetchChapters();
+      handleCloseDialog();
+    } catch (error) {
+      console.error('Error saving chapter:', error);
     }
   };
 
-  const handleDeleteAll = async () => {
+  const handleDeleteChapter = async (_id: string) => {
     try {
-      await deleteAllChapters();
-      setChapters([]);
-    } catch (err) {
-      setError('Failed to delete all chapters');
+      await deleteChapter(_id);
+      fetchChapters();
+    } catch (error) {
+      console.error('Error deleting chapter:', error);
     }
   };
 
-  const handlePageChange = (_event: React.ChangeEvent<unknown>, page: number) => {
-    setCurrentPage(page);
+  const handleOpenDialog = (chapter: Chapter | null = null) => {
+    setSelectedChapter(chapter);
+    setChapterData(chapter ? { chapter: chapter.chapter, meetingDay: chapter.meetingDay } : { chapter: '', meetingDay: '' as MeetingDay });
+    setOpenDialog(true);
   };
 
-  if (loading) return <p>Loading...</p>;
-  if (error) return <p>{error}</p>;
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+    setSelectedChapter(null);
+  };
+
+  const handleChangePage = (event: React.MouseEvent<HTMLButtonElement> | null, newPage: number) => {
+    console.log(event);
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
 
   return (
-    <Box sx={{ padding: '20px' }}>
-      <Typography variant="h4" gutterBottom>
-        Chapter Management
-      </Typography>
+    <Container > 
+      <Box display="flex" justifyContent="space-between" alignItems="center" marginBottom={2} marginTop={5}>
+        <h1 >Chapters</h1>
+        <Button variant="contained" color="primary" onClick={() => handleOpenDialog()}>
+          Create New Chapter
+        </Button>
+      </Box>
 
-      {/* Create a New Chapter */}
-      <Card sx={{ marginBottom: 2 }}>
-        <CardContent>
-          <Typography variant="h5">Create Chapter</Typography>
-          <TextField
-            label="Chapter Name"
-            value={newChapter.chapter}
-            onChange={(e) => setNewChapter({ ...newChapter, chapter: e.target.value })}
-            sx={{ marginRight: 2 }}
-          />
-          <TextField
-            label="Meeting Day"
-            value={newChapter.meetingDay}
-            onChange={(e) => setNewChapter({ ...newChapter, meetingDay: e.target.value })}
-            sx={{ marginRight: 2 }}
-          />
-          <Button variant="contained" color="primary" onClick={handleCreateChapter}>
-            Create Chapter
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Chapter List */}
-      <Typography variant="h5" gutterBottom>
-        Chapter List
-      </Typography>
-      <TableContainer component={Paper}>
+      {/* Chapter Table */}
+      <TableContainer>
         <Table>
           <TableHead>
             <TableRow>
@@ -143,46 +111,18 @@ const ChapterPage: React.FC = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {paginatedChapters.map((chapter) => (
-              <TableRow key={chapter.id}>
-                {editingChapter?.id === chapter.id ? (
-                  <>
-                    <TableCell>
-                      <TextField
-                        value={editingChapter.chapter}
-                        onChange={(e) =>
-                          setEditingChapter({ ...editingChapter, chapter: e.target.value })
-                        }
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <TextField
-                        value={editingChapter.meetingDay}
-                        onChange={(e) =>
-                          setEditingChapter({ ...editingChapter, meetingDay: e.target.value })
-                        }
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Button onClick={() => handleEditChapter(chapter.id)} color="primary">
-                        Save
-                      </Button>
-                    </TableCell>
-                  </>
-                ) : (
-                  <>
-                    <TableCell>{chapter.chapter}</TableCell>
-                    <TableCell>{chapter.meetingDay}</TableCell>
-                    <TableCell>
-                      <Button onClick={() => setEditingChapter(chapter)} color="primary">
-                        Edit
-                      </Button>
-                      <Button onClick={() => handleDeleteChapter(chapter.id)} color="secondary">
-                        Delete
-                      </Button>
-                    </TableCell>
-                  </>
-                )}
+            {chapters.map((chapter) => (
+              <TableRow key={chapter._id}>
+                <TableCell>{chapter.chapter}</TableCell>
+                <TableCell>{chapter.meetingDay}</TableCell>
+                <TableCell>
+                  <IconButton onClick={() => handleOpenDialog(chapter)} color="primary">
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton onClick={() => handleDeleteChapter(chapter._id)} color="secondary">
+                    <DeleteIcon />
+                  </IconButton>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -190,23 +130,55 @@ const ChapterPage: React.FC = () => {
       </TableContainer>
 
       {/* Pagination */}
-      <Box sx={{ display: 'flex', justifyContent: 'center', margin: '20px 0' }}>
-        <Pagination
-          count={pageCount}
-          page={currentPage}
-          onChange={handlePageChange}
-          color="primary"
-        />
-      </Box>
+      <TablePagination
+        component="div"
+        count={100} // Replace this with the total count returned from API
+        page={page}
+        onPageChange={handleChangePage}
+        rowsPerPage={rowsPerPage}
+        onRowsPerPageChange={handleChangeRowsPerPage}
+      />
 
-      {/* Delete All Button */}
-      {chapters.length > 0 && (
-        <Button variant="contained" color="error" onClick={handleDeleteAll}>
-          Delete All Chapters
-        </Button>
-      )}
-    </Box>
+      {/* Create/Edit Chapter Dialog */}
+      <Dialog open={openDialog} onClose={handleCloseDialog}>
+        <DialogTitle>{selectedChapter ? 'Edit Chapter' : 'Create New Chapter'}</DialogTitle>
+        <DialogContent>
+          {/* Chapter Name Input */}
+          <TextField
+            margin="dense"
+            label="Chapter Name"
+            fullWidth
+            value={chapterData.chapter}
+            onChange={(e) => setChapterData({ ...chapterData, chapter: e.target.value })}
+          />
+
+          {/* Meeting Day Dropdown */}
+          <FormControl fullWidth margin="dense">
+            <InputLabel>Meeting Day</InputLabel>
+            <Select
+              value={chapterData.meetingDay}
+              onChange={(e) => setChapterData({ ...chapterData, meetingDay: e.target.value as MeetingDay })}
+              label="Meeting Day"
+            >
+              {Object.values(MeetingDay).map((day) => (
+                <MenuItem key={day} value={day}>
+                  {day}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog} color="secondary">
+            Cancel
+          </Button>
+          <Button onClick={handleCreateOrUpdateChapter} color="primary">
+            {selectedChapter ? 'Update' : 'Create'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Container>
   );
-};
+}
 
 export default ChapterPage;

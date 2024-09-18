@@ -1,34 +1,31 @@
-// src/services/chapterService.ts
-import axios from 'axios';
+// chapter-service.ts
+import axios, { AxiosResponse } from 'axios';
+import { Chapter, MeetingDay } from '../types/types';
 
-const API_URL = 'https://your-api-url/api/chapters'; // Replace with your actual API endpoint
+const API_URL = 'https://uat.bnisa.idzone.in/api/admin/chapter';
 
-// Fetch all chapters
-export const getAllChapters = async () => {
-  const response = await axios.get(API_URL);
-  return response.data;
+// Fetch chapters with pagination (page and size)
+export const getChapters = async (page: number, size: number): Promise<AxiosResponse<Chapter[]>> => {
+  const res = await axios.get(`${API_URL}`, {
+    params: {
+      page: page,
+      size: size,
+    },
+  });
+  return res.data
 };
 
 // Create a new chapter
-export const createChapter = async (chapter: { chapter: string; meetingDay: string }) => {
-  const response = await axios.post(API_URL, chapter);
-  return response.data;
+export const createChapter = (chapterData: { chapter: string; meetingDay: MeetingDay }): Promise<AxiosResponse<Chapter>> => {
+  return axios.post(`${API_URL}`, chapterData);
 };
 
-// Edit a chapter
-export const updateChapter = async (id: string, updatedChapter: { chapter: string; meetingDay: string }) => {
-  const response = await axios.put(`${API_URL}/${id}`, updatedChapter);
-  return response.data;
+// Update an existing chapter
+export const updateChapter = (id: string, updatedData: { chapter: string; meetingDay: MeetingDay }): Promise<AxiosResponse<Chapter>> => {
+  return axios.put(`${API_URL}`, { ...updatedData, id});
 };
 
-// Delete a single chapter
-export const deleteChapter = async (id: string) => {
-  const response = await axios.delete(`${API_URL}/${id}`);
-  return response.data;
-};
-
-// Delete all chapters
-export const deleteAllChapters = async () => {
-  const response = await axios.delete(API_URL);
-  return response.data;
+// Delete a chapter
+export const deleteChapter = (id: string): Promise<AxiosResponse<void>> => {
+  return axios.delete(`${API_URL}?id=${id}`);
 };

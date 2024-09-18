@@ -1,34 +1,31 @@
-// src/services/userCoreService.ts
-import axios from 'axios';
+// usercore-service.ts
+import axios, { AxiosResponse } from 'axios';
+import { UserCore } from '../types/types';
 
-const API_URL = 'https://your-api-url/api/usercore'; // Replace with your actual API URL
+const API_URL = 'https://uat.bnisa.idzone.in/api/admin/user-core';
 
-// Fetch all UserCore records
-export const getAllUserCore = async () => {
-  const response = await axios.get(API_URL);
-  return response.data;
+// Fetch users with pagination
+export const getUsers = async (page: number, size: number): Promise<AxiosResponse<UserCore[]>> => {
+  const res =  await axios.get(`${API_URL}`, {
+    params: {
+      page: page,
+      size: size,
+    },
+  });
+  return res.data
 };
 
-// Update a user
-export const updateUserCore = async (id: string, updatedData: any) => {
-  const response = await axios.put(`${API_URL}/${id}`, updatedData);
-  return response.data;
+// Create a new user
+export const createUser = (userData: UserCore): Promise<AxiosResponse<UserCore>> => {
+  return axios.post(`${API_URL}`, userData);
+};
+
+// Update an existing user
+export const updateUser = (id: string, updatedData: UserCore): Promise<AxiosResponse<UserCore>> => {
+  return axios.put(`${API_URL}?id=${id}`, updatedData);
 };
 
 // Delete a user
-export const deleteUserCore = async (id: string) => {
-  const response = await axios.delete(`${API_URL}/${id}`);
-  return response.data;
-};
-
-// Delete all users
-export const deleteAllUserCore = async () => {
-  const response = await axios.delete(API_URL);
-  return response.data;
-};
-
-// Upload bulk data (Excel)
-export const uploadBulkUserCore = async (data: any) => {
-  const response = await axios.post(`${API_URL}/bulk`, data);
-  return response.data;
+export const deleteUser = (id: string): Promise<AxiosResponse<void>> => {
+  return axios.delete(`${API_URL}?id=${id}`);
 };
