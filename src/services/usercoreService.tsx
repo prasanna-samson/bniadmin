@@ -2,7 +2,7 @@
 import axios, { AxiosResponse } from 'axios';
 import { UserCore } from '../types/types';
 
-const API_URL = 'https://uat.bnisa.idzone.in/api/admin/user-core';
+const API_URL = 'https://bnisa.idzone.in/api/admin/user-core';
 
 // Fetch users with pagination
 export const getUsers = async (page: number, size: number): Promise<AxiosResponse<UserCore[]>> => {

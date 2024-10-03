@@ -44,6 +44,7 @@ function UserCorePage() {
     chapter: '',
     dob: '',
     doj: '',
+    role : '',
     city: '',
     state: '',
     country: '',
@@ -105,6 +106,8 @@ function UserCorePage() {
             email: '',
             mobile: '',
             chapter: '',
+    role : '',
+
             dob: '',
             doj: '',
             city: '',
@@ -158,6 +161,7 @@ function UserCorePage() {
               <TableCell>Gender</TableCell>
               <TableCell>Company</TableCell>
               <TableCell>Chapter</TableCell>
+              <TableCell>Role</TableCell>
               <TableCell>Team</TableCell>
               <TableCell>Role 1</TableCell>
               <TableCell>Responsibility 1</TableCell>
@@ -182,6 +186,7 @@ function UserCorePage() {
                 <TableCell>{user.gender}</TableCell>
                 <TableCell>{user.company}</TableCell>
                 <TableCell>{user.chapter}</TableCell>
+                <TableCell>{user.role}</TableCell>
                 <TableCell>{user.team}</TableCell>
                 <TableCell>{user.role1 || 'N/A'}</TableCell>
                 <TableCell>{user.responsibility1 || 'N/A'}</TableCell>
@@ -301,6 +306,14 @@ function UserCorePage() {
               required
               value={userData.chapter}
               onChange={(e) => setUserData({ ...userData, chapter: e.target.value })}
+            />
+             <TextField
+              margin="dense"
+              label="Role"
+              fullWidth
+              required
+              value={userData.role}
+              onChange={(e) => setUserData({ ...userData, role: e.target.value })}
             />
 
             <TextField

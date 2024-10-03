@@ -31,6 +31,7 @@ export interface UserCore {
     dob?: string; // Date as string for display/input purposes
     doj?: string;
     city: string;
+    role? : string;
     state: string;
     country: string;
     team: string;
