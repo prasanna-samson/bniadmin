@@ -2,7 +2,7 @@
 import axios, { AxiosResponse } from 'axios';
 import { Chapter, MeetingDay } from '../types/types';
 
-const API_URL = 'https://bnisa.idzone.in/api/admin/chapter';
+const API_URL = 'https://uat.bnisa.idzone.in/api/admin/chapter';
 
 // Fetch chapters with pagination (page and size)
 export const getChapters = async (page: number, size: number): Promise<AxiosResponse<Chapter[]>> => {

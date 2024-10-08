@@ -14,24 +14,38 @@ import {
   TableHead,
   TableRow,
   TablePagination,
+  IconButton,
+  Typography,
+  Grid,
+  CircularProgress,
   TextField,
-  MenuItem,
-  Select,
   FormControl,
   InputLabel,
-  IconButton,
+  Select,
+  MenuItem,
+  Paper,
+  useMediaQuery,
+  Alert,
+  SelectChangeEvent,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { getUsers, createUser, updateUser, deleteUser } from '../services/usercoreService';
-import { UserCore } from '../types/types';
+import { UserCore, GetUserResponse } from '../types/types';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 
 function UserCorePage() {
   const [users, setUsers] = useState<UserCore[]>([]);
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
-  const [openDialog, setOpenDialog] = useState(false);
+  const [page, setPage] = useState<number>(0);
+  const [rowsPerPage, setRowsPerPage] = useState<number>(5);
+  const [totalUsers, setTotalUsers] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [openDialog, setOpenDialog] = useState<boolean>(false);
+  const [openDeleteDialog, setOpenDeleteDialog] = useState<boolean>(false);
+  const [userToDelete, setUserToDelete] = useState<UserCore | null>(null);
   const [selectedUser, setSelectedUser] = useState<UserCore | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null); // Error state for handling errors in the form
   const [userData, setUserData] = useState<UserCore>({
     _id: '',
     title: '',
@@ -44,7 +58,7 @@ function UserCorePage() {
     chapter: '',
     dob: '',
     doj: '',
-    role : '',
+    role: '',
     city: '',
     state: '',
     country: '',
@@ -55,21 +69,29 @@ function UserCorePage() {
     responsibility2: '',
   });
 
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
   useEffect(() => {
     fetchUsers();
-  }, [page, rowsPerPage]);
+  }, [page, rowsPerPage, searchQuery]);
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (): Promise<void> => {
+    setLoading(true);
     try {
-      const response = await getUsers(page, rowsPerPage);
-      setUsers(response.data);
+      const response: GetUserResponse = await getUsers(page, rowsPerPage, searchQuery);
+      setUsers(response.data || []);
+      setTotalUsers(response.pagination.totalUsers);
     } catch (error) {
       console.error('Error fetching users:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleCreateOrUpdateUser = async () => {
+  const handleCreateOrUpdateUser = async (): Promise<void> => {
     try {
+      setErrorMessage(null); // Reset error message before each submission
       if (selectedUser) {
         await updateUser(selectedUser._id, userData);
       } else {
@@ -79,19 +101,32 @@ function UserCorePage() {
       handleCloseDialog();
     } catch (error) {
       console.error('Error saving user:', error);
+      setErrorMessage('Failed to save user. Please try again.');
     }
   };
 
-  const handleDeleteUser = async (_id: string) => {
+  const handleDeleteUser = async (): Promise<void> => {
+    if (!userToDelete) return;
     try {
-      await deleteUser(_id);
+      await deleteUser(userToDelete._id);
       fetchUsers();
+      handleCloseDeleteDialog();
     } catch (error) {
       console.error('Error deleting user:', error);
     }
   };
 
-  const handleOpenDialog = (user: UserCore | null = null) => {
+  const handleOpenDeleteDialog = (user: UserCore): void => {
+    setUserToDelete(user);
+    setOpenDeleteDialog(true);
+  };
+
+  const handleCloseDeleteDialog = (): void => {
+    setOpenDeleteDialog(false);
+    setUserToDelete(null);
+  };
+
+  const handleOpenDialog = (user: UserCore | null = null): void => {
     setSelectedUser(user);
     setUserData(
       user
@@ -106,10 +141,9 @@ function UserCorePage() {
             email: '',
             mobile: '',
             chapter: '',
-    role : '',
-
             dob: '',
             doj: '',
+            role: '',
             city: '',
             state: '',
             country: '',
@@ -121,300 +155,339 @@ function UserCorePage() {
           }
     );
     setOpenDialog(true);
+    setErrorMessage(null); // Clear any previous error messages when opening the dialog
   };
 
-  const handleCloseDialog = () => {
+  const handleCloseDialog = (): void => {
     setOpenDialog(false);
     setSelectedUser(null);
   };
-
-  const handleChangePage = (event: React.MouseEvent<HTMLButtonElement> | null, newPage: number) => {
-    console.log(event);
-    
+  const handleChangePage = (_: React.MouseEvent<HTMLButtonElement> | null, newPage: number): void => {
     setPage(newPage);
   };
+  
 
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>): void => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
   };
 
+  const handleInputChange = (
+    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | SelectChangeEvent<string>
+  ): void => {
+    const { name, value } = event.target;
+    setUserData({
+      ...userData,
+      [name as string]: value,
+    });
+  };
+  
+
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
+    setSearchQuery(event.target.value);
+    setPage(0); // Reset to first page when a new search is made
+  };
+
   return (
     <Container>
-      <Box display="flex" justifyContent="space-between" alignItems="center" marginBottom={2} marginTop={5}>
-        <h1>User Core</h1>
-        <Button variant="contained" color="primary" onClick={() => handleOpenDialog()}>
-          Create New User
-        </Button>
+      <Box display="flex" flexDirection={isMobile ? 'column' : 'row'} justifyContent="space-between" alignItems="center" sx={{ mb: 2, mt: 5, gap: 2 }}>
+        <Typography variant="h4" sx={{ fontSize: isMobile ? '1.5rem' : '2rem' }}>User Management</Typography>
+        <Box display="flex" gap={2} flexDirection={isMobile ? 'column' : 'row'} width={isMobile ? '100%' : 'auto'}>
+          <TextField
+            label="Search by Name or Mobile"
+            value={searchQuery}
+            onChange={handleSearchChange}
+            variant="outlined"
+            fullWidth={isMobile}
+            size={isMobile ? 'small' : 'medium'}
+          />
+          <Button variant="contained" color="primary" onClick={() => handleOpenDialog()} fullWidth={isMobile}>
+            Create New User
+          </Button>
+        </Box>
       </Box>
 
-      {/* User Table */}
-      <TableContainer>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Title</TableCell>
-              <TableCell>Name</TableCell>
-              <TableCell>BNI ID</TableCell>
-              <TableCell>Email</TableCell>
-              <TableCell>Mobile</TableCell>
-              <TableCell>Gender</TableCell>
-              <TableCell>Company</TableCell>
-              <TableCell>Chapter</TableCell>
-              <TableCell>Role</TableCell>
-              <TableCell>Team</TableCell>
-              <TableCell>Role 1</TableCell>
-              <TableCell>Responsibility 1</TableCell>
-              <TableCell>Role 2</TableCell>
-              <TableCell>Responsibility 2</TableCell>
-              <TableCell>Dob</TableCell>
-              <TableCell>Doj</TableCell>
-              <TableCell>City</TableCell>
-              <TableCell>State</TableCell>
-              <TableCell>Country</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {users.map((user) => (
-              <TableRow key={user._id}>
-                <TableCell>{user.title}</TableCell>
-                <TableCell>{user.name}</TableCell>
-                <TableCell>{user.bniId || 'N/A'}</TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell>{user.mobile}</TableCell>
-                <TableCell>{user.gender}</TableCell>
-                <TableCell>{user.company}</TableCell>
-                <TableCell>{user.chapter}</TableCell>
-                <TableCell>{user.role}</TableCell>
-                <TableCell>{user.team}</TableCell>
-                <TableCell>{user.role1 || 'N/A'}</TableCell>
-                <TableCell>{user.responsibility1 || 'N/A'}</TableCell>
-                <TableCell>{user.role2 || 'N/A'}</TableCell>
-                <TableCell>{user.responsibility2 || 'N/A'}</TableCell>
-                <TableCell>{user.dob ? new Date(user.dob).toLocaleDateString() : 'N/A'}</TableCell>
-                <TableCell>{user.doj ? new Date(user.doj).toLocaleDateString() : 'N/A'}</TableCell>
-                <TableCell>{user.city}</TableCell>
-                <TableCell>{user.state}</TableCell>
-                <TableCell>{user.country}</TableCell>
-                <TableCell>
-                  <IconButton onClick={() => handleOpenDialog(user)} color="primary">
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton onClick={() => handleDeleteUser(user._id)} color="secondary">
-                    <DeleteIcon />
-                  </IconButton>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      {loading ? (
+        <Box display="flex" justifyContent="center" alignItems="center" sx={{ mt: 2 }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <Paper elevation={3}>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  {['Name', 'Email', 'Mobile', 'Role', 'Chapter', 'Company', 'Actions'].map((header) => (
+                    <TableCell key={header} align="center">
+                      {header}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {users.map((user) => (
+                  <TableRow key={user._id}>
+                    <TableCell align="center">{user.name}</TableCell>
+                    <TableCell align="center">{user.email}</TableCell>
+                    <TableCell align="center">{user.mobile}</TableCell>
+                    <TableCell align="center">{user.role}</TableCell>
+                    <TableCell align="center">{user.chapter}</TableCell>
+                    <TableCell align="center">{user.company}</TableCell>
+                    <TableCell align="center">
+                      <IconButton onClick={() => handleOpenDialog(user)} color="primary">
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton onClick={() => handleOpenDeleteDialog(user)} color="error">
+                        <DeleteIcon />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
 
-      {/* Pagination */}
-      <TablePagination
-        component="div"
-        count={100} // Replace this with the total count returned from API
-        page={page}
-        onPageChange={handleChangePage}
-        rowsPerPage={rowsPerPage}
-        onRowsPerPageChange={handleChangeRowsPerPage}
-      />
+          <TablePagination
+            component="div"
+            count={totalUsers}
+            page={page}
+            onPageChange={handleChangePage}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+          />
+        </Paper>
+      )}
 
-      {/* Create/Edit User Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
         <DialogTitle>{selectedUser ? 'Edit User' : 'Create New User'}</DialogTitle>
         <DialogContent>
-          <Box display="flex" flexWrap="wrap" gap={2}>
-            <FormControl fullWidth margin="dense">
-              <InputLabel>Title</InputLabel>
-              <Select
-                value={userData.title}
-                onChange={(e) => setUserData({ ...userData, title: e.target.value })}
-                label="Title"
-              >
-                <MenuItem value="Mr">Mr</MenuItem>
-                <MenuItem value="Mrs">Mrs</MenuItem>
-                <MenuItem value="Ms">Ms</MenuItem>
-                <MenuItem value="Dr">Dr</MenuItem>
-                {/* Add more titles as needed */}
-              </Select>
-            </FormControl>
-
-            <TextField
-              margin="dense"
-              label="Name"
-              fullWidth
-              required
-              value={userData.name}
-              onChange={(e) => setUserData({ ...userData, name: e.target.value })}
-            />
-
-            <TextField
-              margin="dense"
-              label="BNI ID"
-              fullWidth
-              value={userData.bniId}
-              onChange={(e) => setUserData({ ...userData, bniId: e.target.value })}
-            />
-
-            <FormControl fullWidth margin="dense">
-              <InputLabel>Gender</InputLabel>
-              <Select
-                value={userData.gender}
-                onChange={(e) => setUserData({ ...userData, gender: e.target.value })}
-                label="Gender"
-              >
-                <MenuItem value="Male">Male</MenuItem>
-                <MenuItem value="Female">Female</MenuItem>
-                <MenuItem value="Other">Other</MenuItem>
-              </Select>
-            </FormControl>
-
-            <TextField
-              margin="dense"
-              label="Company"
-              fullWidth
-              required
-              value={userData.company}
-              onChange={(e) => setUserData({ ...userData, company: e.target.value })}
-            />
-
-            <TextField
-              margin="dense"
-              label="Email"
-              type="email"
-              fullWidth
-              required
-              value={userData.email}
-              onChange={(e) => setUserData({ ...userData, email: e.target.value })}
-            />
-
-            <TextField
-              margin="dense"
-              label="Mobile"
-              fullWidth
-              required
-              value={userData.mobile}
-              onChange={(e) => setUserData({ ...userData, mobile: e.target.value })}
-            />
-
-            <TextField
-              margin="dense"
-              label="Chapter"
-              fullWidth
-              required
-              value={userData.chapter}
-              onChange={(e) => setUserData({ ...userData, chapter: e.target.value })}
-            />
-             <TextField
-              margin="dense"
-              label="Role"
-              fullWidth
-              required
-              value={userData.role}
-              onChange={(e) => setUserData({ ...userData, role: e.target.value })}
-            />
-
-            <TextField
-              margin="dense"
-              label="City"
-              fullWidth
-              required
-              value={userData.city}
-              onChange={(e) => setUserData({ ...userData, city: e.target.value })}
-            />
-
-            <TextField
-              margin="dense"
-              label="State"
-              fullWidth
-              required
-              value={userData.state}
-              onChange={(e) => setUserData({ ...userData, state: e.target.value })}
-            />
-
-            <TextField
-              margin="dense"
-              label="Country"
-              fullWidth
-              required
-              value={userData.country}
-              onChange={(e) => setUserData({ ...userData, country: e.target.value })}
-            />
-
-            <TextField
-              margin="dense"
-              label="Team"
-              fullWidth
-              required
-              value={userData.team}
-              onChange={(e) => setUserData({ ...userData, team: e.target.value })}
-            />
-
-            <TextField
-              margin="dense"
-              label="Role 1"
-              fullWidth
-              value={userData.role1}
-              onChange={(e) => setUserData({ ...userData, role1: e.target.value })}
-            />
-
-            <TextField
-              margin="dense"
-              label="Responsibility 1"
-              fullWidth
-              value={userData.responsibility1}
-              onChange={(e) => setUserData({ ...userData, responsibility1: e.target.value })}
-            />
-
-            <TextField
-              margin="dense"
-              label="Role 2"
-              fullWidth
-              value={userData.role2}
-              onChange={(e) => setUserData({ ...userData, role2: e.target.value })}
-            />
-
-            <TextField
-              margin="dense"
-              label="Responsibility 2"
-              fullWidth
-              value={userData.responsibility2}
-              onChange={(e) => setUserData({ ...userData, responsibility2: e.target.value })}
-            />
-
-            <TextField
-              margin="dense"
-              label="Date of Birth"
-              type="date"
-              fullWidth
-              InputLabelProps={{
-                shrink: true,
-              }}
-              value={userData.dob ? userData.dob.split('T')[0] : ''}
-              onChange={(e) => setUserData({ ...userData, dob: e.target.value })}
-            />
-
-            <TextField
-              margin="dense"
-              label="Date of Joining"
-              type="date"
-              fullWidth
-              InputLabelProps={{
-                shrink: true,
-              }}
-              value={userData.doj ? userData.doj.split('T')[0] : ''}
-              onChange={(e) => setUserData({ ...userData, doj: e.target.value })}
-            />
-          </Box>
+          {errorMessage && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {errorMessage}
+            </Alert>
+          )}
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
+                <InputLabel>Title</InputLabel>
+                <Select
+                  name="title"
+                  value={userData.title}
+                  onChange={handleInputChange}
+                  label="Title"
+                >
+                  <MenuItem value="Mr">Mr</MenuItem>
+                  <MenuItem value="Mrs">Mrs</MenuItem>
+                  <MenuItem value="Miss">Miss</MenuItem>
+                  <MenuItem value="Dr">Dr</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                name="name"
+                label="Name"
+                value={userData.name}
+                onChange={handleInputChange}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                name="bniId"
+                label="BNI ID"
+                value={userData.bniId}
+                onChange={handleInputChange}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
+                <InputLabel>Gender</InputLabel>
+                <Select
+                  name="gender"
+                  value={userData.gender}
+                  onChange={handleInputChange}
+                  label="Gender"
+                >
+                  <MenuItem value="Male">Male</MenuItem>
+                  <MenuItem value="Female">Female</MenuItem>
+                  <MenuItem value="Other">Other</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                name="company"
+                label="Company"
+                value={userData.company}
+                onChange={handleInputChange}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                name="email"
+                label="Email"
+                value={userData.email}
+                onChange={handleInputChange}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                name="mobile"
+                label="Mobile"
+                value={userData.mobile}
+                onChange={handleInputChange}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                name="chapter"
+                label="Chapter"
+                value={userData.chapter}
+                onChange={handleInputChange}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                name="dob"
+                label="Date of Birth"
+                type="date"
+                value={userData.dob}
+                onChange={handleInputChange}
+                fullWidth
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                name="doj"
+                label="Date of Joining"
+                type="date"
+                value={userData.doj}
+                onChange={handleInputChange}
+                fullWidth
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                name="city"
+                label="City"
+                value={userData.city}
+                onChange={handleInputChange}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                name="state"
+                label="State"
+                value={userData.state}
+                onChange={handleInputChange}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                name="country"
+                label="Country"
+                value={userData.country}
+                onChange={handleInputChange}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                name="team"
+                label="Team"
+                value={userData.team}
+                onChange={handleInputChange}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                name="role1"
+                label="Role 1"
+                value={userData.role1}
+                onChange={handleInputChange}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                name="responsibility1"
+                label="Responsibility 1"
+                value={userData.responsibility1}
+                onChange={handleInputChange}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                name="role2"
+                label="Role 2"
+                value={userData.role2}
+                onChange={handleInputChange}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                name="responsibility2"
+                label="Responsibility 2"
+                value={userData.responsibility2}
+                onChange={handleInputChange}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
+                <InputLabel>Role</InputLabel>
+                <Select
+                  name="role"
+                  value={userData.role}
+                  onChange={handleInputChange}
+                  label="Role"
+                >
+                  <MenuItem value="SUPER_ADMIN">SUPER ADMIN</MenuItem>
+                  <MenuItem value="ADMIN">ADMIN</MenuItem>
+                  <MenuItem value="SECRETORY">SECRETORY</MenuItem>
+                  <MenuItem value="SA_COORDINATOR">SA COORDINATOR</MenuItem>
+                  <MenuItem value="USER">USER</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog} color="secondary">
             Cancel
           </Button>
-          <Button onClick={handleCreateOrUpdateUser} color="primary">
+          <Button onClick={handleCreateOrUpdateUser} variant="contained" color="primary">
             {selectedUser ? 'Update' : 'Create'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={openDeleteDialog} onClose={handleCloseDeleteDialog}>
+        <DialogTitle>Confirm Deletion</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete user <strong>{userToDelete?.name}</strong>?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDeleteDialog} color="secondary">
+            Cancel
+          </Button>
+          <Button onClick={handleDeleteUser} color="error" variant="contained">
+            Delete
           </Button>
         </DialogActions>
       </Dialog>

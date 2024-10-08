@@ -9,52 +9,58 @@ import MenuIcon from '@mui/icons-material/Menu';
 import Container from '@mui/material/Container';
 import Button from '@mui/material/Button';
 import MenuItem from '@mui/material/MenuItem';
-import Avatar from '@mui/material/Avatar';
-import Tooltip from '@mui/material/Tooltip';
 import AdbIcon from '@mui/icons-material/Adb';
-import { deepPurple } from '@mui/material/colors';
+import { useNavigate } from 'react-router-dom';
 
-const pages = ['usercore', 'chapter'];
-const settings = ['Profile', 'Account', 'Dashboard', 'Logout'];
+const pages = ['usercore', 'chapter', 'members'];
 
 function ResponsiveAppBar() {
   const [anchorElNav, setAnchorElNav] = React.useState<null | HTMLElement>(null);
-  const [anchorElUser, setAnchorElUser] = React.useState<null | HTMLElement>(null);
+  const navigate = useNavigate();
+
+  const isLoggedIn = !!localStorage.getItem('authToken'); // Check if user is logged in
 
   const handleOpenNavMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorElNav(event.currentTarget);
-  };
-
-  const handleOpenUserMenu = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorElUser(event.currentTarget);
   };
 
   const handleCloseNavMenu = () => {
     setAnchorElNav(null);
   };
 
-  const handleCloseUserMenu = () => {
-    setAnchorElUser(null);
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    navigate('/login');
   };
 
   return (
-    <AppBar position="static" sx={{ backgroundColor: '#1976d2', boxShadow: 'none' }}>
+    <AppBar
+      position="static"
+      sx={{
+        background: 'rgba(255, 255, 255, 0.9)',
+        backdropFilter: 'blur(8px)',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+        color: '#333',
+        fontFamily: 'Poppins',
+        padding: { xs: '0.5rem', md: '0 2rem' },
+      }}
+    >
       <Container maxWidth="xl">
         <Toolbar disableGutters>
           {/* Desktop Logo */}
-          <AdbIcon sx={{ display: { xs: 'none', md: 'flex' }, mr: 1 }} />
+          <AdbIcon sx={{ display: { xs: 'none', md: 'flex' }, mr: 1, color: '#333' }} />
           <Typography
-            variant="h6"
+            variant="h5"
             noWrap
+            fontFamily={'Poppins'}
             component="a"
             href="/"
             sx={{
               mr: 2,
               display: { xs: 'none', md: 'flex' },
-              fontFamily: 'Roboto',
-              fontWeight: 700,
+              fontWeight: 800,
               letterSpacing: '.3rem',
-              color: 'inherit',
+              color: '#333',
               textDecoration: 'none',
             }}
           >
@@ -71,7 +77,7 @@ function ResponsiveAppBar() {
               onClick={handleOpenNavMenu}
               color="inherit"
             >
-              <MenuIcon />
+              <MenuIcon sx={{ color: '#333' }} />
             </IconButton>
             <Menu
               id="menu-appbar"
@@ -89,18 +95,19 @@ function ResponsiveAppBar() {
               onClose={handleCloseNavMenu}
               sx={{ display: { xs: 'block', md: 'none' } }}
             >
-              {pages.map((page) => (
-                <MenuItem key={page} onClick={handleCloseNavMenu}>
-                  <Typography textAlign="center">{page}</Typography>
-                </MenuItem>
-              ))}
+              {isLoggedIn &&
+                pages.map((page) => (
+                  <MenuItem key={page} onClick={() => { navigate(`/${page}`); handleCloseNavMenu(); }}>
+                    <Typography textAlign="center" sx={{ color: '#333' }}>{page}</Typography>
+                  </MenuItem>
+                ))}
             </Menu>
           </Box>
 
           {/* Mobile Logo */}
-          <AdbIcon sx={{ display: { xs: 'flex', md: 'none' }, mr: 1 }} />
+          <AdbIcon sx={{ display: { xs: 'flex', md: 'none' }, mr: 1, color: '#333' }} />
           <Typography
-            variant="h5"
+            variant="h6"
             noWrap
             component="a"
             href="/"
@@ -108,68 +115,65 @@ function ResponsiveAppBar() {
               mr: 2,
               display: { xs: 'flex', md: 'none' },
               flexGrow: 1,
-              fontFamily: 'Roboto',
               fontWeight: 700,
-              letterSpacing: '.3rem',
-              color: 'inherit',
+              letterSpacing: '.2rem',
+              color: '#333',
               textDecoration: 'none',
             }}
           >
-            BNI SA 
+            BNI SA
           </Typography>
 
           {/* Desktop Navigation Links */}
-          <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex', justifyContent: 'center' } }}>
-            {pages.map((page) => (
+          {isLoggedIn && (
+            <Box
+              sx={{
+                flexGrow: 1,
+                display: { xs: 'none', md: 'flex' },
+                justifyContent: 'center',
+                gap: 2,
+              }}
+            >
+              {pages.map((page) => (
+                <Button
+                  key={page}
+                  onClick={() => navigate(`/${page}`)}
+                  sx={{
+                    my: 2,
+                    color: '#333',
+                    fontSize: '1rem',
+                    textTransform: 'uppercase',
+                    transition: 'transform 0.2s ease-in-out, background-color 0.3s ease',
+                    '&:hover': {
+                      backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                      transform: 'scale(1.05)',
+                    },
+                  }}
+                >
+                  {page}
+                </Button>
+              ))}
+            </Box>
+          )}
+
+          {/* Logout Button */}
+          {isLoggedIn && (
+            <Box sx={{ flexGrow: 0, ml: 2 }}>
               <Button
-                key={page}
-                href={page}
-                onClick={handleCloseNavMenu}
+                variant="contained"
+                color="secondary"
+                onClick={handleLogout}
                 sx={{
-                  my: 2,
-                  color: 'white',
-                  display: 'block',
-                  fontSize: '1rem',
-                  marginLeft: '20px',
-                  textTransform: 'uppercase',
-                  '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' },
+                  textTransform: 'none',
+                  color: '#fff',
+                  '&:hover': {
+                  },
                 }}
               >
-                {page}
+                Logout
               </Button>
-            ))}
-          </Box>
-
-          {/* User Icon with Menu */}
-          <Box sx={{ flexGrow: 0 }}>
-            <Tooltip title="Open settings">
-              <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
-                <Avatar sx={{ bgcolor: deepPurple[500] }}>U</Avatar>
-              </IconButton>
-            </Tooltip>
-            <Menu
-              sx={{ mt: '45px' }}
-              id="menu-appbar"
-              anchorEl={anchorElUser}
-              anchorOrigin={{
-                vertical: 'top',
-                horizontal: 'right',
-              }}
-              keepMounted
-              transformOrigin={{
-                vertical: 'top',
-                horizontal: 'right',
-              }}
-              open={Boolean(anchorElUser)}
-              onClose={handleCloseUserMenu}
-            >
-              {settings.map((setting) => (
-                <MenuItem key={setting} onClick={handleCloseUserMenu}>
-                  <Typography textAlign="center">{setting}</Typography>
-                </MenuItem>
-              ))}
-            </Menu>
-          </Box>
+            </Box>
+          )}
         </Toolbar>
       </Container>
     </AppBar>

@@ -1,18 +1,19 @@
-// usercore-service.ts
+// usercoreService.ts
 import axios, { AxiosResponse } from 'axios';
-import { UserCore } from '../types/types';
+import { GetUserResponse, UserCore } from '../types/types';
 
-const API_URL = 'https://bnisa.idzone.in/api/admin/user-core';
+const API_URL = 'https://uat.bnisa.idzone.in/api/admin/user-core';
 
 // Fetch users with pagination
-export const getUsers = async (page: number, size: number): Promise<AxiosResponse<UserCore[]>> => {
-  const res =  await axios.get(`${API_URL}`, {
+export const getUsers = async (page: number, size: number , searchQuery: string): Promise<GetUserResponse> => {
+  const res: AxiosResponse<GetUserResponse> = await axios.get(`${API_URL}`, {
     params: {
-      page: page,
-      size: size,
+      page,
+      size,
+      search: searchQuery || '',
     },
   });
-  return res.data
+  return res.data; // Return the response directly
 };
 
 // Create a new user
