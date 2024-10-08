@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 
 import ResponsiveAppBar from './components/navbar';
 import ChapterTest from './components/chaptertest';
@@ -15,7 +15,7 @@ const App: React.FC = () => {
       <ResponsiveAppBar />
       
       <Routes>
-        <Route path="/" element={<UserCore />} />
+      <Route path="/" element={<Navigate to="/usercore" />} />
         <Route path="/chaptertest" element={<ProtectedRoute element={<ChapterTest />} />} />
         <Route path="/usercore" element={<ProtectedRoute element={<UserCore />} />} />
         <Route path="/members" element={<ProtectedRoute element={<MemberPage />} />} />
