@@ -2,7 +2,7 @@
 import axios, { AxiosResponse } from 'axios';
 import { GetMemberResponse, Member } from '../types/types';
 
-const API_URL = 'https://uat.bnisa.idzone.in/api/admin/member';
+const API_URL = 'https://bnisa.idzone.in/api/admin/member';
 
 // Fetch members with pagination
 export const getMembers = async (page: number, size: number, searchQuery: string): Promise<GetMemberResponse> => {
