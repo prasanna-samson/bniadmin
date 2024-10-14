@@ -352,11 +352,12 @@ function MemberPage() {
               <FormControl fullWidth>
                 <InputLabel>Role</InputLabel>
                 <Select name="role" value={memberData.role} onChange={handleInputChange} label="Role">
-                  <MenuItem value="SUPER_ADMIN">SUPER ADMIN</MenuItem>
-                  <MenuItem value="ADMIN">ADMIN</MenuItem>
-                  <MenuItem value="SECRETARY">SECRETARY</MenuItem>
-                  <MenuItem value="SA_COORDINATOR">SA COORDINATOR</MenuItem>
-                  <MenuItem value="USER">USER</MenuItem>
+                  <MenuItem value="SUPER_ADMIN">Super Admin</MenuItem>
+                  <MenuItem value="ADMIN">Admin</MenuItem>
+                  <MenuItem value="SECRETARY">Secretary</MenuItem>
+                  <MenuItem value="SA_COORDINATOR">SA Coordinator</MenuItem>
+                  <MenuItem value="SA_VISITORS">SA Visitors</MenuItem>
+                  <MenuItem value="USER">User</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
